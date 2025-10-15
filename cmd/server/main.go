@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
+	"log"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,15 +15,30 @@ func main() {
 	conn, _ := amqp.Dial(connectionString)
 	defer conn.Close()
 	fmt.Println("Connected to RabbitMQ successfully.")
-
 	channel, _ := conn.Channel()
-
 	defer channel.Close()
-	pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+	gamelogic.PrintServerHelp()
+	for {
+		input := gamelogic.GetInput()
+		if len(input) == 0 {
+			continue
+		}
+		if input[0] == "pause" {
+			log.Println("Sending a pause message to the queue")
+			pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+			continue
+		}
+		if input[0] == "resume" {
+			log.Println("Sending a resume message to the queue")
+			pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: false})
+			continue
+		}
+		if input[0] == "quit" {
+			log.Println("Exiting the game")
+			break
+		}
+		log.Printf("Don't understand command %v", input[0])
 
-	// wait for ctrl+c
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
+	}
 	fmt.Println("\nShutting down gracefully...")
 }
