@@ -18,6 +18,13 @@ func main() {
 	channel, _ := conn.Channel()
 	defer channel.Close()
 	gamelogic.PrintServerHelp()
+	pubsub.DeclareAndBind(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug,
+		routing.GameLogSlug+".*",
+		pubsub.DurableQueue,
+	)
 	for {
 		input := gamelogic.GetInput()
 		if len(input) == 0 {
